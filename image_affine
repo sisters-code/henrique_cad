@@ -1,0 +1,74 @@
+import torchvision.transforms as T
+import cv2
+import torch
+from torchvision.transforms import InterpolationMode
+
+resize = (256, 256)
+crop_size = (224, 224)
+img = cv2.imread('face.JPG')
+img = torch.from_numpy(img.transpose(2, 0, 1))
+
+transform = T.Compose([
+    T.Resize(tuple(resize)),
+    T.RandomCrop(tuple(crop_size)),
+    # T.RandomHorizontalFlip(p=0.5),
+    T.RandomAffine(degrees=10, translate=(0.1, 0.1),
+                           interpolation=InterpolationMode.BILINEAR)
+])
+
+out = transform(img)
+out = out.numpy().transpose(1,2,0)
+cv2.imwrite('1.JPG',out)
+
+
+def train_dataloader(self) -> DataLoader:
+    resize = (256, 256)
+    crop_size = (224, 224)
+
+    transform = T.Compose([
+        T.Resize(tuple(resize)),
+        T.RandomCrop(tuple(crop_size)),
+        T.RandomHorizontalFlip(p=0.5),
+        T.RandomAffine(degrees=10, translate=(0.1, 0.1),
+                       interpolation=InterpolationMode.BILINEAR),
+        T.Normalize(self.norm_mean, self.norm_std)
+    ])
+    dataset = MultiFacePartDataset(
+        self.args.dataset_parts_root,
+        split_file=Path(self.args.split + 'train.txt'),
+        transform=transform, balance_samples=self.args.balance_samples,
+        part_names=self.args.face_part_names,
+        use_gray=self.args.use_gray,
+        use_eqhist=self.args.use_eqhist,
+        use_gamma=self.args.use_gamma
+    )
+
+    loader = DataLoader(
+        dataset, self.args.batch_size, shuffle=True, num_workers=16, pin_memory=False,
+        drop_last=False
+    )
+
+
+    def val_dataloader(self) -> DataLoader:
+        resize = (256,256)
+        crop_size = (224,224)
+
+        transform = T.Compose([
+            T.Resize(tuple(resize)),
+            T.CenterCrop(tuple(crop_size)),
+            T.Normalize(self.norm_mean, self.norm_std)
+        ])
+        dataset = MultiFacePartDataset(
+            self.args.dataset_parts_root,
+            split_file=Path(self.args.split + 'val.txt'),
+            transform=transform,
+            part_names=self.args.face_part_names,
+            use_gray=self.args.use_gray,
+            use_eqhist=self.args.use_eqhist,
+            use_gamma=self.args.use_gamma
+        )
+
+        return DataLoader(
+            dataset, self.args.batch_size, shuffle=False, num_workers=4, pin_memory=False,
+            drop_last=False
+        )
